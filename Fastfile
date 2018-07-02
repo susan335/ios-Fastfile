@@ -44,7 +44,7 @@ platform :ios do
       output_dir = "model"
     end
     snapshot(
-      devices: ["iPhone 8 Plus"],
+      devices: ["iPhone 8 Plus", "iPhone 8", "iPhone SE", "iPhone X"],
       languages: ["ja"],
       clean: false,
       output_directory: "./fastlane/snapshot_test/#{output_dir}"
