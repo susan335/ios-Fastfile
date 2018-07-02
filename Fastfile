@@ -284,7 +284,7 @@ platform :ios do
     puts "version string = #{version_string}"
     # tagつけてpush!
     sh("git tag #{version_string}")
-    # sh("git push origin #{version_string}")
+    sh("git push origin #{version_string}")
   end
 
   ####################################################
