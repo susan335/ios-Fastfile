@@ -40,42 +40,59 @@ platform :ios do
     mode = ENV["SCREENSHOT_TEST_MODE"] unless options[:mode]
 
     output_dir = "result"
-    if mode == "record"
-      output_dir = "model"
-    end
+    model_dir = "model"
+    diff_dir = "diff"
+
     snapshot(
       devices: ["iPhone 8 Plus", "iPhone 8", "iPhone SE", "iPhone X"],
       languages: ["ja"],
       clean: false,
       output_directory: "./fastlane/snapshot_test/#{output_dir}"
     )
+    hasDiff = false
     Dir.chdir("snapshot_test") do
+      hasDiff = compare_image(
+        dir1:"#{model_dir}/ja/",
+        dir2:"#{output_dir}/ja/",
+        output_dir:"#{diff_dir}/",
+      )
       if mode == "verify"
-        p mode
-        has_diff = false
-        diff_dir = "diff"
-        FileUtils.mkdir_p(diff_dir, :mode => 0777)
-
-        model_images = Dir.glob("model/*/*.png")
-        model_images.each do |imageA|
-          p imageA
-          paths = imageA.split(File::SEPARATOR)
-          paths.shift
-          paths.unshift(output_dir)
-          imageB = paths.join("/")
-          compare = MiniMagick::Tool::Compare.new(whiny: false)
-          compare.metric('AE')
-          compare << imageA
-          compare << imageB
-          compare << "#{diff_dir}/#{paths.last}_diff.png"
-          compare.call do |_, dist, _|
-            p File.basename(imageA), dist
-            has_diff = true unless dist.to_i.zero?
-          end
-        end
-        UI.user_error!("[ScreenShot] There are different pixcel.") if has_diff
+        UI.user_error!("[ScreenShot] There are different pixcel.") if hasDiff
+      elsif
+        File.rename(model_dir, "#{model_dir}_old")
+        File.rename(output_dir, model_dir)
       end
     end
+  end
+
+  desc "Runs snapshot tests"
+  private_lane :compare_image do |options|
+    hasDiff = false
+    FileUtils.mkdir_p("#{options[:output_dir]}", :mode => 0777)
+
+    modelImages = Dir.glob("#{options[:dir1]}/*.png")
+    compare_images = Dir.glob("#{options[:dir2]}/*.png")
+    modelImages.each do |imageA|
+      diffImage = "#{options[:output_dir]}/#{File.basename(imageA)}_diff.png"
+      imageB = compare_images.find { |image| File.basename(imageA) == File.basename(image) }
+      compare_images.delete(imageB)
+      p imageA, imageB
+
+      compare = MiniMagick::Tool::Compare.new(whiny: false)
+      compare.metric('AE')
+      compare << imageA
+      compare << imageB
+      compare << diffImage
+      compare.call do |_, dist, _|
+        p dist
+        if dist == "0"
+          File.delete(diffImage)
+        end
+        hasDiff = true unless dist.to_i.zero?
+      end
+    end
+    puts hasDiff
+
   end
 
   ####################################################
