@@ -207,7 +207,7 @@ platform :ios do
       distribution_key: "#{options[:distribution_key]}"
     )
     upload_symbols_to_crashlytics(
-      dsym_path: configuration + ".app.dSYM.zip",
+      dsym_path: options[:configuration] + ".app.dSYM.zip",
       api_token: ENV["CRASHLYTICS_API_TOKEN"]
     )
   end
