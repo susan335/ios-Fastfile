@@ -56,8 +56,9 @@ platform :ios do
         dir2:"#{output_dir}/ja/",
         output_dir:"#{diff_dir}/",
       )
+      p hasDiff
       if mode == "verify"
-        UI.user_error!("[ScreenShot] There are different pixcel.") if hasDiff
+        UI.user_error!("[ScreenShot] There are different pixcel.") if hasDiff == true
       elsif
         File.rename(model_dir, "#{model_dir}_old")
         File.rename(output_dir, model_dir)
@@ -65,7 +66,7 @@ platform :ios do
     end
   end
 
-  desc "Runs snapshot tests"
+  desc "Compare images"
   private_lane :compare_image do |options|
     hasDiff = false
     FileUtils.mkdir_p("#{options[:output_dir]}", :mode => 0777)
@@ -91,8 +92,7 @@ platform :ios do
         hasDiff = true unless dist.to_i.zero?
       end
     end
-    puts hasDiff
-
+    hasDiff
   end
 
   ####################################################
