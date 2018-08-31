@@ -107,16 +107,16 @@ platform :ios do
   # dotenv
   # - - - - - - - - - - - - - - -
   # MATCH_PASSWORD = "XXXXXXX"
-  # APP_BUNDLE_ID = "XXXXXXX"
   # - - - - - - - - - - - - - - -
   desc "Runs all the tests"
   private_lane :my_match do |options|
     UI.user error!("Required type.") unless options[:type]
+    UI.user error!("Required bundle_id.") unless options[:bundle_id]
     match(
       force: true,
       clone_branch_directly: "master",
       type: "#{options[:type]}",
-      app_identifier: ENV["APP_BUNDLE_ID"]
+      app_identifier: options[:bundle_id]
     )
   end
 
@@ -157,14 +157,15 @@ platform :ios do
   # STAGE_CONFIGURATION = "XXXXXXX"
   # STAGE_DISTRIBUTION_KEY = "XXXXXXX"
   # CRASHLYTICS_API_TOKEN = "XXXXXXX"
-  # APP_BUNDLE_ID = "XXXXXXX"
+  # STAGE_BUNDLE_ID = "XXXXXXX"
   # - - - - - - - - - - - - - - -
   desc "Deploy a new Stage Build to DeployGate"
   lane :submit_stage_dg do
     submit_dg(
       scheme: ENV["STAGE_SCHEME"],
       configuration: ENV["STAGE_CONFIGURATION"],
-      distribution_key: ENV["STAGE_DISTRIBUTION_KEY"]
+      distribution_key: ENV["STAGE_DISTRIBUTION_KEY"],
+      bundle_id: ENV["STAGE_BUNDLE_ID"]
     )
   end
 
@@ -174,33 +175,37 @@ platform :ios do
   # ADHOC_CONFIGURATION = "XXXXXXX"
   # ADHOC_DISTRIBUTION_KEY = "XXXXXXX"
   # CRASHLYTICS_API_TOKEN = "XXXXXXX"
-  # APP_BUNDLE_ID = "XXXXXXX"
+  # ADHOC_BUNDLE_ID = "XXXXXXX"
   # - - - - - - - - - - - - - - -
   desc "Deploy a new Release Build to DeployGate"
   lane :submit_release_dg do
     submit_dg(
       scheme: ENV["ADHOC_SCHEME"],
       configuration: ENV["ADHOC_CONFIGURATION"],
-      distribution_key: ENV["ADHOC_DISTRIBUTION_KEY"]
+      distribution_key: ENV["ADHOC_DISTRIBUTION_KEY"],
+      bundle_id: ENV["ADHOC_BUNDLE_ID"]
     )
   end
 
   # dotenv
   # - - - - - - - - - - - - - - -
   # CRASHLYTICS_API_TOKEN = "XXXXXXX"
-  # APP_BUNDLE_ID = "XXXXXXX"
   # - - - - - - - - - - - - - - -
   desc "Deploy a new Build to DeployGate"
   private_lane :submit_dg do |options|
     UI.user error!("Required scheme name.") unless options[:scheme]
     UI.user error!("Required configuration.") unless options[:configuration]
     UI.user error!("Required distribution_key.") unless options[:distribution_key]
-    my_match(type: "adhoc")
+    UI.user error!("Required bundle id.") unless options[:bundle_id]
+    my_match(
+      type: "adhoc",
+      bundle_id: "#{options[:bundle_id]}"
+    )
     my_gym(
       scheme: "#{options[:scheme]}",
       configuration: "#{options[:configuration]}",
       type: "ad-hoc",
-      provisioningProfiles: { ENV["APP_BUNDLE_ID"] => "match AdHoc #{ENV["APP_BUNDLE_ID"]}" }
+      provisioningProfiles: { options[:bundle_id] => "match AdHoc #{options[:bundle_id]}" }
     )
     deploygate(
       message: changelog_from_git_commits(pretty: "%h: %s", commits_count: 10),
@@ -217,19 +222,22 @@ platform :ios do
   # RELEASE_SCHEME = "XXXXXXX"
   # RELEASE_CONFIGURATION = "XXXXXXX"
   # CRASHLYTICS_API_TOKEN = "XXXXXXX"
-  # APP_BUNDLE_ID = "XXXXXXX"
+  # RELEASE_BUNDLE_ID = "XXXXXXX"
   # - - - - - - - - - - - - - - -
   desc "Deploy a new version to the App Store"
   lane :submit_store do
-    my_match(type: "appstore")
+    my_match(
+      type: "appstore",
+      bundle_id: ENV["RELEASE_BUNDLE_ID"]
+    )
     my_gym(
       scheme: ENV["RELEASE_SCHEME"],
       configuration: ENV["RELEASE_CONFIGURATION"],
       type: "app-store",
-      provisioningProfiles: { ENV["APP_BUNDLE_ID"] => "match #{ENV["APP_BUNDLE_ID"]}" }
+      provisioningProfiles: { ENV["RELEASE_BUNDLE_ID"] => "match #{ENV["RELEASE_BUNDLE_ID"]}" }
     )
     deliver(
-      app_identifier: ENV["APP_BUNDLE_ID"],
+      app_identifier: ENV["RELEASE_BUNDLE_ID"],
       ipa: "./#{ENV["RELEASE_CONFIGURATION"]}.ipa",
       force: true,
       automatic_release: false,
@@ -246,14 +254,14 @@ platform :ios do
   # - - - - - - - - - - - - - - -
   # INFO_PLIST_PATH = "XXXXXXX"
   # CRASHLYTICS_API_TOKEN = "XXXXXXX"
-  # APP_BUNDLE_ID = "XXXXXXX"
+  # RELEASE_BUNDLE_ID = "XXXXXXX"
   # - - - - - - - - - - - - - - -
   desc "Download dSYM from iTunesConnect. and Upload to Crashlytics."
   lane :dsym do
     version_string = get_info_plist_value(path: ENV["INFO_PLIST_PATH"], key: "CFBundleShortVersionString")
     download_dsyms(
       version: version_string,
-      app_identifier: ENV["APP_BUNDLE_ID"]
+      app_identifier: ENV["RELEASE_BUNDLE_ID"]
     )
     upload_symbols_to_crashlytics(
       api_token: ENV["CRASHLYTICS_API_TOKEN"]
