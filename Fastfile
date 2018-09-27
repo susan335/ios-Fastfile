@@ -44,7 +44,7 @@ platform :ios do
     diff_dir = "diff"
 
     snapshot(
-      devices: ["iPhone 8 Plus", "iPhone 8", "iPhone SE", "iPhone X"],
+      devices: ["iPhone 8 Plus", "iPhone 8", "iPhone SE", "iPhone XS", "iPhone XR", "iPhone XS Max"],
       languages: ["ja"],
       clean: false,
       output_directory: "./fastlane/snapshot_test/#{output_dir}"
